@@ -1,66 +1,90 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import { getAllArticles } from "@/lib/rss";
+import { CATEGORIES } from "@/lib/sources";
+import HeroArticle from "@/components/HeroArticle";
+import NewsTicker from "@/components/NewsTicker";
+import ArticleCard from "@/components/ArticleCard";
+import Link from "next/link";
 
-export default function Home() {
+export const revalidate = 300;
+
+export default async function HomePage() {
+  const articles = await getAllArticles();
+  const hero = articles[0];
+  const rest = articles.slice(1);
+
+  const byCategory = CATEGORIES.map((cat) => ({
+    ...cat,
+    articles: rest.filter((a) => a.category === cat.slug).slice(0, 6),
+  }));
+
+  const allArticles = [...rest];
+  const totalSources = new Set(articles.map((a) => a.source)).size;
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div>
+      {/* Breaking ticker */}
+      <NewsTicker articles={articles.slice(0, 20)} />
+
+      {/* Hero */}
+      {hero && <HeroArticle article={hero} />}
+
+      <div className="container">
+        {/* Stats */}
+        <div className="stats-bar">
+          <div className="stat-item">
+            <span className="stat-value">{articles.length}</span>
+            <span className="stat-label">Articles Live</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-value">{totalSources}</span>
+            <span className="stat-label">Israeli Sources</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-value">{CATEGORIES.length}</span>
+            <span className="stat-label">Topics</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-value">5m</span>
+            <span className="stat-label">Refresh Rate</span>
+          </div>
         </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+
+        {/* Latest — all categories combined */}
+        <section className="section">
+          <div className="section-header">
+            <div className="section-bar" />
+            <h2 className="section-title">🇮🇱 Latest from Israel</h2>
+            <Link href="/search?q=israel" className="section-view-all">View all →</Link>
+          </div>
+          <div className="articles-grid">
+            {allArticles.slice(0, 6).map((article, i) => (
+              <div key={article.id} className="fade-up" style={{ animationDelay: `${i * 0.06}s` }}>
+                <ArticleCard article={article} />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Category sections */}
+        {byCategory.filter((cat) => cat.articles.length > 0).map((cat) => (
+          <section key={cat.slug} className="section category-section">
+            <div className="section-header">
+              <div className="section-bar" />
+              <h2 className="section-title">{cat.icon} {cat.label}</h2>
+              <Link href={`/category/${cat.slug}`} className="section-view-all">
+                View all →
+              </Link>
+            </div>
+            <div className="articles-grid">
+              {cat.articles.map((article, i) => (
+                <div key={article.id} className="fade-up" style={{ animationDelay: `${i * 0.06}s` }}>
+                  <ArticleCard article={article} />
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
     </div>
   );
 }
